@@ -1,7 +1,9 @@
+import bcrypt from "bcrypt"
 
 export async function userForm(){
     return {
-            email: "teste7@email.com",
+            email: "tester@email.com",
             password: "123"
         };
 }
+

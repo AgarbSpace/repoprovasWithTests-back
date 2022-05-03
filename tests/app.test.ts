@@ -2,7 +2,7 @@ import supertest from "supertest"
 import app from "../src/app.js";
 import { prisma } from "../src/database.js";
 import * as userFactory from "./factories/userFactory.js"
-
+import * as testFactory from "./factories/testFactory.js"
 
 describe("POST /sign-up", () => {
     afterAll(async () => {
@@ -55,7 +55,7 @@ describe("POST /sign-in", () => {
         const user = await userFactory.userForm();
         const response = await supertest(app).post("/sign-in").send({email: user.email, password: user.password});
         expect(response.status).toBe(200);
-        expect(response.body.token).not.toBeNull();
+        expect(response.body.token.length).toBeGreaterThan(0);
     });
 
     it("should return 401 given an ivalid data in sign-in form", async () => {
@@ -82,6 +82,39 @@ describe("POST /sign-in", () => {
     });
 });
 
+describe("Post /add-prova", () => {
+    afterAll(async () => {
+        await prisma.$disconnect();
+    });
+
+    it("should return 201 given a valid form", async () => {
+        const user = await userFactory.userForm();
+        const signInResponse = await supertest(app).post("/sign-in").send({email: user.email, password: user.password});
+        const token = signInResponse.body.token; 
+        const test = await testFactory.testForm();
+        const addTestResponse = await supertest(app).post("/add-test").send(test).set("authorization", `Bearer ${token}`);
+        expect(addTestResponse.status).toBe(201);
+    });
+
+    it("should return 422 given a missing field", async () => {
+        const user = await userFactory.userForm();
+        const signInResponse = await supertest(app).post("/sign-in").send({email: user.email, password: user.password});
+        const token = signInResponse.body.token; 
+        const test = await testFactory.testForm();
+        delete test.category;
+        const addTestResponse = await supertest(app).post("/add-test").send(test).set("authorization", `Bearer ${token}`);
+        expect(addTestResponse.status).toBe(422);
+    });
+
+    it("should return 401 not given a authorization header", async () => {
+        const user = await userFactory.userForm();
+        const signInResponse = await supertest(app).post("/sign-in").send({email: user.email, password: user.password});
+        const token = signInResponse.body.token; 
+        const test = await testFactory.testForm();
+        const addTestResponse = await supertest(app).post("/add-test").send(test);
+        expect(addTestResponse.status).toBe(401);
+    });
+});
 
 
 
